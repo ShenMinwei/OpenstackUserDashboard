@@ -1,0 +1,142 @@
+{%extends 'original.html'%}
+
+{%block preload%}
+
+{%endblock%}
+{%load sizeformat%}
+{%block title%}
+Log
+{%endblock%}
+
+{%block css%}
+<link href="/static/user/css/bootstrap.css" rel="stylesheet">
+<link href="/static/user/css/sb-admin.css" rel="stylesheet">
+<link href="/static/user/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+{%endblock%}
+
+{%block leftnav%}
+<ul class="nav navbar-nav side-nav">
+	<li class="dropdown">
+		<a class="dropdown-toggle" data-toggle="dropdown"><i class="fa"></i> Projects <b class="caret"></b></a>
+		<ul class="dropdown-menu">
+			{%for project in projects reversed%}
+			<li><a href="{%url 'switch_tenants' project.id %}"><i class="fa"></i> {{project.name}}</a></li>
+			{%endfor%}
+		</ul>
+	</li>
+	<li class="dropdown">
+		<a class="dropdown-toggle" data-toggle="dropdown"><i class="fa"></i> Instances <b class="caret"></b></a>
+		<ul class="dropdown-menu">
+			{%for instance in instances reversed%}
+			<li><a href="../../{{instance.id}}/log"><i class="fa"></i> {{instance.name}}</a></li>
+			{%endfor%}
+		</ul>
+	</li>
+</ul>
+{%endblock%}
+
+
+{%block main_content%}
+<div class="row">
+				<div class="col-lg-12">
+					<ol class="breadcrumb">
+						<li><a href="../..">{{tenant_name}}</a></li>
+						<li class="active">{{current_instance.name}}</li>
+					</ol>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-lg-12">
+					<div>
+						<ul class="nav nav-tabs" style="margin-bottom: 5px;">
+							<li class="active"><a href="#overview" data-toggle="tab">Overview</a></li>
+							<li><a href="#log" data-toggle="tab">Log</a></li>
+						</ul>
+						<div class="tab-content">
+							<div id="overview" class="tab-pane fade active in">
+								<div >
+									<h4>Info</h4>
+									<dl>
+										<dt>Name</dt>
+										<dd>{{ current_instance.name }}</dd>
+										<dt>ID</dt>
+										<dd>{{ current_instance.id }}</dd>
+										<dt>Status</dt>
+										<dd>{{ current_instance.status|title }}</dd>
+										<dt>Created</dt>
+										<dd>{{ current_instance.created|parse_isotime }}</dd>
+										<dt>Uptime</dt>
+										<dd>{{ current_instance.created|parse_isotime|timesince }}</dd>
+									</dl>
+									<hr>
+								</div>
+								<div>
+									<h4>Specs</h4>
+									
+									<dl>
+										<dt>Flavor</dt>
+										<dd>{{current_instance.full_flavor.name}}</dd>
+										<dt>RAM</dt>
+										<dd>{{current_instance.full_flavor.ram|mbformat}}</dd>
+										<dt>VCPUS</dt>
+										<dd>{{current_instance.full_flavor.vcpus}} VCPUS</dd>
+										<dt>Disk</dt>
+										<dd>{{current_instance.full_flavor.disk}} GB</dd>
+									</dl>
+									<hr>
+								</div>
+								<div>
+									<h4>IP Addresses</h4>
+									
+									<dl>
+										{% for network, ip_list in current_instance.addresses.items %}
+										<dt>{{ network|title }}</dt>
+										<dd>
+											{% for ip in ip_list %}
+											{% if not forloop.last %}{{ ip.addr}},&nbsp;{% else %}{{ip.addr}}{% endif %}
+											{% endfor %}
+										</dd>
+										{% endfor %}
+									</dl>
+									<hr>
+								</div>
+								<div>
+									<h4>Meta</h4>
+									
+									<dl>
+										<dt>Key Name</dt>
+										{% with default_key_name="<em>"|add:_("None")|add:"</em>" %}
+										<dd>{{ current_instance.key_name|default:default_key_name }}</dd>
+										{% endwith %}
+										<dt>Image Name</dt>
+										<dd>{{current_instance.image_name}}</dd>
+										{% with default_item_value="<em>"|add:_("N/A")|add:"</em>" %}
+										{% for key, value in current_instance.metadata.items %}
+										<dt>{{ key|force_escape }}</dt>
+										<dd>{{ value|force_escape|default:default_item_value }}</dd>
+										{% endfor%}
+										{% endwith %}
+  									</dl>
+  									<hr>
+								</div>
+							</div>
+							
+							<div id="log" class="tab-pane fade">
+								<p>
+									<button onclick="getLatestLog()"class="btn btn-primary btn-xs">view latest</button> <input name="log_length" style="width:60px" type="text" value="40"></input>logs or <a href="../fulllog" target="_blank">view full log</a>
+								</p>
+								<pre>
+									{{console_log}}
+								</pre>	
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+{%endblock%}
+
+{%block js%}
+<script src="/static/user/js/jquery-1.10.2.js"></script>
+<script src="/static/user/js/bootstrap.min.js"></script>
+<script src="/static/user/js/userdash.js"></script>
+{%endblock%}

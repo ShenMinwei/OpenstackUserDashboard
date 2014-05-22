@@ -1,0 +1,252 @@
+{%extends 'original.html'%}
+{%block title%}
+User Dashboard
+{%endblock%}
+
+{%block css%}
+<link href="/static/user/css/bootstrap.css" rel="stylesheet">
+<link href="/static/user/css/sb-admin.css" rel="stylesheet">
+<link href="/static/user/font-awesome/css/font-awesome.min.css" rel="stylesheet" >
+<link href="/static/user/morris/morris.css" rel="stylesheet">
+{%endblock%}
+
+{%block leftnav%}
+<ul class="nav navbar-nav side-nav">
+	<li class="dropdown">
+		<a class="dropdown-toggle" data-toggle="dropdown"><i class="fa"></i> Projects <b class="caret"></b></a>
+		<ul class="dropdown-menu">
+			{%for project in projects reversed%}
+			<li><a href="{%url 'switch_tenants' project.id %}"><i class="fa"></i> {{project.name}}</a></li>
+			{%endfor%}
+		</ul>
+	</li>
+</ul>
+{%endblock%}
+
+{%block modal%}
+<!--console modal=============================================================================-->
+<div class="modal fade" id="console" tabindex="-1" role="dialog" aria-labelledby="consoleLabel" aria-hidden="true">
+	<div class="modal-dialog" style="width:900px">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h4 class="modal-title" id="consoleLabel">Console</h4>
+			</div>
+			<div class="modal-body" style="height:500px">
+				<iframe id="console_embed" src="" style="width:100%;height:100%"></iframe>
+			</div>
+			<div class="modal-footer">
+				<a id="view_console_window" href="" target="_blank">View console in a new window</a>
+			</div>
+
+		</div>
+	</div>
+</div>
+{%endblock%}
+
+{%block main_content%}
+<!--project name===============================================================================-->
+<div class="row">
+	<div class="col-lg-12">
+		{%for project in projects%}
+		{%if project.name == tenant_name%}
+		<h1>{{project.name}} <small>{{project.description}}</small></h1>
+		{%endif%}
+		{%endfor%}
+	</div>
+</div>
+
+<!--the limit table==============================================================================-->
+<div class="row">
+	<div class="col-lg-3">
+		<div id="instance_limit" style="height:200px"></div>
+	</div>
+	<div class="col-lg-3">
+		<div id="core_limit" style="height:200px"></div>
+	</div>
+	<div class="col-lg-3">
+		<div id="ram_limit" style="height:200px"></div>
+	</div>
+	<div class="col-lg-3"></div>
+</div>
+
+<hr>
+
+<!--2 info boards=============================================================================-->
+<div name="info_board_error" style="display:none">
+	<div class="alert alert-dismissable alert-warning">
+		<button type="button" onclick="closeInfoBoard('info_board_error')" class="close" >&times;</button>
+		<h4>Error</h4>
+		<p></p>
+	</div>
+</div>
+
+<div name="info_board_success" style="display:none">
+	<div class="alert alert-dismissable alert-success">
+		<button type="button" onclick="closeInfoBoard('info_board_success')" class="close" >&times;</button>
+		<h4>Success</h4>
+		<p></p>
+	</div>
+</div>
+
+
+<!--the main content, instances==========================================================-->
+{%for instance in instances reversed%}
+<div class="row">
+	<div class="col-lg-9">
+		<div class="panel panel-primary">
+			<div class="panel-heading">
+				<div class="row">
+					<div class="col-lg-4">
+						<h4 style="margin-top:7px"class="panel-title">
+							<a data-toggle="collapse" href="#{{instance.id}}">{{instance.name}}</a>
+						</h4>
+					</div>
+					<div class="col-lg-3"></div>
+					<div class="col-lg-5">
+						<button style="margin-left:90px"onclick="location.href='{{instance.id}}/log'" class="btn btn-primary btn-sm">Log</button>
+						<button onclick="showConsole('{{instance.console_url}}','{{instance.name}}')" data-toggle="modal" data-target="#console" class="btn btn-primary btn-sm">Console</button>
+						<div class="btn-group">
+							<button type="button" class="btn btn-primary btn-sm">Actions</button>
+							<button style="margin-right:0px"onclick="checkStatus('{{instance.id}}')" type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+							<ul class="dropdown-menu">
+								<li><a id="start-instance-button-{{instance.id}}"onclick="startInstance('{{instance.id}}')">Start</a></li>
+								<li><a id="stop-instance-button-{{instance.id}}"onclick="stopInstance('{{instance.id}}')">Stop</a></li>
+								<li><a id="suspend-instance-button-{{instance.id}}"onclick="suspendInstance('{{instance.id}}')">Suspend</a></li>
+								<li><a id="resume-instance-button-{{instance.id}}"onclick="resumeInstance('{{instance.id}}')">Resume</a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="{{instance.id}}" class="panel-collapse collapse">
+				<div class="panel-body">
+					<div>
+						<ul class="nav nav-tabs">
+							<li class="active"><a href="#info_{{instance.id}}" data-toggle="tab">Info</a></li>
+							<li><a onclick="get_cpu_statistics('{{instance.id}}',3600,true)" href="#cpu_{{instance.id}}" data-toggle="tab">CPU</a></li>
+							<li><a onclick="get_network_statistics('{{instance.id}}',3600,true)"href="#network_{{instance.id}}" data-toggle="tab">Network</a></li>
+							<li><a onclick="get_disk_statistics('{{instance.id}}',3600,true)"href="#disk_{{instance.id}}" data-toggle="tab">Disk</a></li>
+						</ul>
+						<div class="tab-content" >
+							<div id="info_{{instance.id}}" class="tab-pane fade active in">
+								<div class="row">
+									<div class="col-lg-6">
+										<div class="table-responsive">
+											<table class="table table-bordered table-hover table-striped">
+												<tbody>
+													<tr>
+														<td>Image</td>
+														<td>{{instance.image}}</td>
+													</tr>
+													<tr>
+														<td>Status</td>
+														<td>{{instance.status}}</td>
+													</tr>
+													<tr>
+														<td>Power</td>
+														<td>{{instance.powerstate}}</td>
+													</tr>
+													<tr>
+														<td>Flavor</td>
+														<td>{{instance.flavor}}</td>
+													</tr>
+													<tr>
+														<td>ID</td>
+														<td>{{instance.id}}</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+									<div class="col-lg-6">
+										<div class="table-responsive">
+											<table class="table table-bordered table-hover table-striped">
+												<tbody>
+													<tr>
+														<td>IP</td>
+														<td>{{instance.ip}}</td>
+													</tr>
+													<tr>
+														<td>Keyname</td>
+														<td>{{instance.keyname}}</td>
+													</tr>
+													<tr>
+														<td>Uptime</td>
+														<td>{{instance.created|parse_isotime|timesince }}</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div id="cpu_{{instance.id}}" class="tab-pane fade">
+								<select class="form-control"style="margin-top:10px;width:120px">
+									<option onclick="get_cpu_statistics('{{instance.id}}',3600,false)" >last day</option>
+									<option onclick="get_cpu_statistics('{{instance.id}}',28800,false)">last week</option>
+									<option onclick="get_cpu_statistics('{{instance.id}}',86400,false)">last month</option>
+								</select>
+								<div id="cpu_{{instance.id}}_chart"></div>
+							</div>
+							<div id="network_{{instance.id}}" class="tab-pane fade">
+								<select class="form-control"style="margin-top:10px;width:120px">
+									<option onclick="get_network_statistics('{{instance.id}}',3600,false)">last day</option>
+									<option onclick="get_network_statistics('{{instance.id}}',28800,false)">last week</option>
+									<option onclick="get_network_statistics('{{instance.id}}',86400,false)">last month</option>
+								</select>
+								<div id="network_{{instance.id}}_chart"></div>
+							</div>
+							<div id="disk_{{instance.id}}" class="tab-pane fade">
+								<select class="form-control"style="margin-top:10px;width:120px">
+									<option onclick="get_disk_statistics('{{instance.id}}',3600,false)">last day</option>
+									<option onclick="get_disk_statistics('{{instance.id}}',28800,false)">last week</option>
+									<option onclick="get_disk_statistics('{{instance.id}}',86400,false)">last month</option>
+								</select>
+								<div id="disk_{{instance.id}}_chart"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="col-lg-3"></div>
+</div>
+{%endfor%}
+{%endblock%}
+
+{%block js%}
+<script src="/static/user/js/jquery-1.10.2.js"></script>
+<script src="/static/user/js/bootstrap.min.js"></script>
+<script src="/static/user/morris/morris.min.js"></script>
+<script src="/static/user/js/raphael.js"></script>
+<script src="/static/user/js/userdash.js"></script>
+<script type="text/javascript">
+		//donut table for project limits
+		new Morris.Donut({
+			element:"instance_limit",
+			data:[
+			{value:{{limit.instanceUsed}},label:"used instances"},
+			{value:{{limit.instanceUnused}},label:"unused instances"}	
+			]
+		});
+		new Morris.Donut({
+			element:"core_limit",
+			data:[
+			{value:{{limit.coreUsed}},label:"used cores"},
+			{value:{{limit.coreUnused}},label:"unused cores"}	
+			]
+		});
+		new Morris.Donut({
+			element:"ram_limit",
+			data:[
+			{value:{{limit.ramUsed}},label:"used ram",formatted:"GB"},
+			{value:{{limit.ramUnused}},label:"unused ram",formatted:"GB"}	
+			],
+			formatter:function(x,data){return x+data.formatted;}
+		});
+
+		
+		</script>
+{%endblock%}
